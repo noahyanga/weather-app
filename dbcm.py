@@ -1,6 +1,11 @@
+"""
+Context manager module to manage the database connections.
+"""
+
 import sqlite3
 
 class DBCM:
+    """Database connection manager."""
     def __init__(self, db_name):
         self.db_name = db_name
         self.conn = None

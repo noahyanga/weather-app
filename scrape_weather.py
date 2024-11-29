@@ -1,6 +1,8 @@
 from html.parser import HTMLParser
 import urllib.request
 from datetime import datetime
+from db_operations import DBOperations
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class WeatherScraper(HTMLParser):
     def __init__(self):
@@ -45,7 +47,9 @@ class WeatherScraper(HTMLParser):
 
             try:
                 if self.col_index == 0 and not self.current_date:
-                    self.current_date = f"{self.year}-{self.month:02}-{clean_data}"
+                    # Ensure the date is correctly formatted
+                    day = int(clean_data)
+                    self.current_date = f"{self.year}-{self.month:02}-{day:02}"
                 elif self.col_index in [1, 2, 3]:
                     self.current_temp.append(float(clean_data))
             except ValueError:
@@ -65,7 +69,7 @@ class WeatherScraper(HTMLParser):
 
     def scrape_all_days(self, year, month):
         """Scrape data for all days in a specific month."""
-        self.weather = {}  # Clear previous month's data
+        weather = {}  # Clear previous month's data
         self.year = year
         self.month = month
         url = f"http://climate.weather.gc.ca/climate_data/daily_data_e.html?StationID=27174&timeframe=2&Year={year}&Month={month}"
@@ -83,44 +87,58 @@ class WeatherScraper(HTMLParser):
 
             self.feed(html)
 
+            # Copy the scraped data to the local dictionary
+            weather.update(self.weather)
+            self.weather.clear()  # Clear the shared dictionary for the next use
+
             # Return all days of scraped data in dictionary format
-            return self.weather
+            return weather
 
         except Exception as e:
             print(f"Error fetching data for {year}-{month:02}: {e}")
             return {}
 
-def scrape_backwards_indefinitely(start_year, start_month):
-    """
-    Scrapes data backwards from the current date indefinitely.
-    """
-    current_month = start_month
-    current_year = start_year
-    scraper = WeatherScraper()
+    def scrape_backwards(self, start_year, start_month):
+        """
+        Scrapes data backwards from the current date.
+        """
+        current_month = start_month
+        current_year = start_year
+        db = DBOperations()
+        tasks = []
 
-    while True:
-        scraped_weather = scraper.scrape_all_days(current_year, current_month)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            while True:
+                # Check if the date is earlier than the earliest available data
+                if current_year < 1996 or (current_year == 1996 and current_month < 9):
+                    print("No more data available. Earliest date reached.")
+                    break
+
+                tasks.append(executor.submit(self.scrape_and_save, current_year, current_month, db))
+
+                # Move to the previous month
+                current_month -= 1
+                if current_month == 0:
+                    current_month = 12
+                    current_year -= 1
+
+            for task in as_completed(tasks):
+                task.result()
+
+    def scrape_and_save(self, year, month, db):
+        scraped_weather = self.scrape_all_days(year, month)
 
         # Check if data is available
         if scraped_weather:
-            print(f"\nScraped Weather Data for {current_year}-{current_month:02}:")
+            print(f"\nScraped Weather Data for {year}-{month:02}:")
             for date, temps in scraped_weather.items():
                 print(f"Day: {date} -> Max: {temps['Max']}, Min: {temps['Min']}, Mean: {temps['Mean']}°C")
-            print(f"Total days scraped for {current_year}-{current_month:02}: {len(scraped_weather)}\n")
+            print(f"Total days scraped for {year}-{month:02}: {len(scraped_weather)}\n")
+
+            # Save the scraped data to the database
+            db.save_data(scraped_weather)
         else:
-            print(f"No data available for {current_year}-{current_month:02}. Moving to the next month.")
-
-        if not scraper.has_previous_month:
-            print(f"ERROR: No more previous data to scrape from {current_year}-{current_month:02}. Stopping.")
-            break
-
-        # Move to the previous month
-        current_month -= 1
-        if current_month == 0:
-            current_month = 12
-            current_year -= 1
-
-
+            print(f"No data available for {year}-{month:02}. Moving to the next month.")
 
 if __name__ == "__main__":
     now = datetime.now()
@@ -128,4 +146,5 @@ if __name__ == "__main__":
     current_month = now.month
 
     # Testing to see auto stopping of no more data (not working yet)
-    scrape_backwards_indefinitely(1997, 3)
+    scraper = WeatherScraper()
+    scraper.scrape_backwards(current_year, current_month)
