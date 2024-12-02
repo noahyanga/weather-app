@@ -1,8 +1,14 @@
+"""
+Module to plot weather data.
+"""
+
 import matplotlib.pyplot as plt
 from db_operations import DBOperations
 
 class PlotOperations:
-    """"""
+    """
+    Class to plot weather data.
+    """
     def __init__(self, data):
         self.data = data
 

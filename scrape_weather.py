@@ -1,3 +1,7 @@
+"""
+Module to scrape weather data from the Government of Canada's website.
+"""
+
 from html.parser import HTMLParser
 import urllib.request
 from datetime import datetime
@@ -5,6 +9,9 @@ from db_operations import DBOperations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class WeatherScraper(HTMLParser):
+    """
+    Class to scrape weather data from the Government of Canada's website.
+    """
     def __init__(self):
         super().__init__()
         self.weather = {}  # store the scraped weather data for the month
@@ -19,6 +26,9 @@ class WeatherScraper(HTMLParser):
         self.has_previous_month = False  # check for the "Previous Month" link
 
     def handle_starttag(self, tag, attrs):
+        """
+        Handle the start tag of an HTML element.
+        """
         if tag == 'tr':  # Start of a table row
             self.recording_row = True
             self.current_date = None
@@ -37,6 +47,9 @@ class WeatherScraper(HTMLParser):
                     self.has_previous_month = True
 
     def handle_data(self, data):
+        """
+        Handle the data within an HTML element.
+        """
         if self.recording_row and self.recording_cell:
             clean_data = data.strip()
 
@@ -56,6 +69,9 @@ class WeatherScraper(HTMLParser):
                 self.current_temp.append(None) # missing or invalid data
 
     def handle_endtag(self, tag):
+        """
+        Handle the end tag of an HTML element.
+        """
         if tag == 'td' or tag == 'th':
             self.recording_cell = False
         elif tag == 'tr':  # End of row
@@ -107,7 +123,7 @@ class WeatherScraper(HTMLParser):
         db = DBOperations()
         tasks = []
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=16) as executor:
             while True:
                 # Check if the date is earlier than the earliest available data
                 if current_year < 1996 or (current_year == 1996 and current_month < 9):
@@ -126,6 +142,9 @@ class WeatherScraper(HTMLParser):
                 task.result()
 
     def scrape_and_save(self, year, month, db):
+        """
+        Scrape weather data for a specific month and save it to the database.
+        """
         scraped_weather = self.scrape_all_days(year, month)
 
         # Check if data is available

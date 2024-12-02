@@ -1,7 +1,14 @@
+"""
+Module to handle database operations.
+"""
+
 from dbcm import DBCM
 
 DB_NAME = "weather.sqlite"
 class DBOperations:
+    """
+    Class to handle database operations.
+    """
     def __init__(self, db_name=DB_NAME):
         """Initialize the DBOperations class with the database name."""
         self.db_name = db_name

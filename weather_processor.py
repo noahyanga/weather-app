@@ -1,48 +1,111 @@
+"""
+Module to process weather data.
+"""
+
 import tkinter as tk
 from tkinter import ttk
+import logging
 from datetime import datetime
 from db_operations import DBOperations
 from scrape_weather import WeatherScraper
 from plot_operations import PlotOperations
 
+# Configure logging
+logging.basicConfig(filename='weather_processor.log', level=logging.ERROR,
+                    format='%(asctime)s:%(levelname)s:%(message)s')
+
 class WeatherProcessor:
+    """
+    Class to process weather data.
+    """
     def __init__(self):
-        self.db = DBOperations()
+        self.db = None
         self.scraper = WeatherScraper()
+
+    def initialize_db(self):
+        self.db = DBOperations()
         self.db.initialize_db()
 
     def download_full_data(self, start_year, start_month):
+        """
+        Download full weather data starting from the given year and month.
+        """
+        if self.db is None:
+            self.initialize_db()
         self.scraper.scrape_backwards(start_year, start_month)
 
+    def get_latest_date_from_db(self):
+        """
+        Get the latest date from the database. 
+        """
+        try:
+            data = self.db.fetch_data()
+            if data:
+                latest_date = max(entry['date'] for entry in data)
+                return latest_date
+            return None
+        except Exception as e:
+            logging.error("Error getting latest date from database: %s", e)
+            print("Error getting latest date from database. Check the log file for details.")
+            return None
+
     def update_data(self):
+        """
+        Update the data in the database with the latest data.
+        """
+        if self.db is None:
+            print("No data found in the database. Please download the full data first.")
+            logging.error("Attempted to update data without downloading full data first.")
+            return
         latest_date = self.get_latest_date_from_db()
-        if (latest_date):
+        if latest_date:
             latest_year, latest_month, _ = map(int, latest_date.split('-'))
             now = datetime.now()
+            if latest_year == now.year and latest_month == now.month:
+                print("The data is up to date.")
+                return
             self.scraper.scrape_backwards(latest_year, latest_month + 1)
         else:
             print("No data found in the database. Please download the full data first.")
 
-    def get_latest_date_from_db(self):
-        data = self.db.fetch_data()
-        if data:
-            latest_date = max(entry['date'] for entry in data)
-            return latest_date
-        return None
-
     def generate_box_plot(self, start_year, end_year):
-        data = self.db.fetch_data()
-        weather_data = self.organize_data_for_plotting(data)
-        plotter = PlotOperations(weather_data)
-        plotter.plot_boxplot(start_year, end_year)
+        """
+        Generate a box plot for the given range of years.
+        """
+        if self.db is None:
+            print("No data found in the database. Please download the full data first.")
+            logging.error("Attempted to generate box plot without downloading full data first.")
+            return
+        try:
+            data = self.db.fetch_data()
+            weather_data = self.organize_data_for_plotting(data)
+            plotter = PlotOperations(weather_data)
+            plotter.plot_boxplot(start_year, end_year)
+        except Exception as e:
+            logging.error("Error generating box plot: %s", e)
+            print("Error generating box plot. Check the log file for details.")
 
     def generate_line_plot(self, year, month):
-        data = self.db.fetch_data()
-        weather_data = self.organize_data_for_plotting(data)
-        plotter = PlotOperations(weather_data)
-        plotter.plot_lineplot(year, month)
+        """
+        Generate a line plot for the given year and month.
+        """
+        if self.db is None:
+            print("No data found in the database. Please download the full data first.")
+            logging.error("Attempted to generate line plot without downloading full data first.")
+            return
+        try:
+            data = self.db.fetch_data()
+            weather_data = self.organize_data_for_plotting(data)
+            plotter = PlotOperations(weather_data)
+            plotter.plot_lineplot(year, month)
+        except Exception as e:
+            logging.error("Error generating line plot: %s", e)
+            print("Error generating line plot. Check the log file for details.")
 
     def organize_data_for_plotting(self, data):
+        """
+        Organize the data in a format suitable for plotting.
+        """
         organized_data = {}
         for entry in data:
             date = entry['date']
@@ -55,12 +118,17 @@ class WeatherProcessor:
                         organized_data[year][month] = []
                     organized_data[year][month].append(entry['avg_temp'])
                 except ValueError as e:
+                    logging.error("Skipping invalid date entry: %s - Error: %s", date, e)
                     print(f"Skipping invalid date entry: {date} - Error: {e}")
             else:
+                logging.error("Skipping entry with empty date: %s", entry)
                 print(f"Skipping entry with empty date: {entry}")
         return organized_data
 
 class WeatherProcessorUI:
+    """
+    Class to create the user interface for the weather data processor.
+    """
     def __init__(self, root, processor):
         self.processor = processor
         self.root = root
@@ -69,7 +137,9 @@ class WeatherProcessorUI:
         self.create_widgets()
 
     def create_widgets(self):
-        # Create style
+        """
+        Create the widgets for the user interface.
+        """
         style = ttk.Style()
         style.configure("TLabel", font=("Helvetica", 12))
         style.configure("TButton", font=("Helvetica", 12))
@@ -138,22 +208,70 @@ class WeatherProcessorUI:
         main_frame.grid_columnconfigure(1, weight=1)
 
     def download_data(self):
-        start_year = int(self.start_year_entry.get())
-        start_month = 1  # Assuming starting from January
-        self.processor.download_full_data(start_year, start_month)
+        """Download full weather data."""
+        try:
+            now = datetime.now()
+            start_year= now.year
+            start_month = now.month
+            self.processor.download_full_data(start_year, start_month)
+        except ValueError as e:
+            logging.error("Error parsing start year: %s", e)
+            print("Error parsing start year. Check the log file for details.")
+        except Exception as e:
+            logging.error("Error downloading data: %s", e)
+            print("Error downloading data. Check the log file for details.")
 
     def update_data(self):
-        self.processor.update_data()
+        """Update the weather data."""
+        try:
+            self.processor.update_data()
+        except Exception as e:
+            logging.error("Error updating data: %s", e)
+            print("Error updating data. Check the log file for details.")
 
     def generate_box_plot(self):
-        start_year = int(self.start_year_entry.get())
-        end_year = int(self.end_year_entry.get())
-        self.processor.generate_box_plot(start_year, end_year)
+        """Generate a box plot."""
+        try:
+            start_year = self.validate_year(self.start_year_entry.get())
+            end_year = self.validate_year(self.end_year_entry.get())
+            self.processor.generate_box_plot(start_year, end_year)
+        except ValueError as e:
+            logging.error("Error parsing years for box plot: %s", e)
+            print("Error parsing years for box plot. Check the log file for details.")
+        except Exception as e:
+            logging.error("Error generating box plot: %s", e)
+            print("Error generating box plot. Check the log file for details.")
 
     def generate_line_plot(self):
-        year = int(self.year_entry.get())
-        month = int(self.month_entry.get())
-        self.processor.generate_line_plot(year, month)
+        """Generate a line plot."""
+        try:
+            year = self.validate_year(self.year_entry.get())
+            month = self.validate_month(self.month_entry.get())
+            self.processor.generate_line_plot(year, month)
+        except ValueError as e:
+            logging.error("Error parsing year or month for line plot: %s", e)
+            print("Error parsing year or month for line plot. Check the log file for details.")
+        except Exception as e:
+            logging.error("Error generating line plot: %s", e)
+            print("Error generating line plot. Check the log file for details.")
+
+    def validate_year(self, year_str):
+        """Validate the year input."""
+        if not year_str.isdigit():
+            raise ValueError(f"Invalid year: {year_str}")
+        year = int(year_str)
+        if year < 1900 or year > datetime.now().year:
+            raise ValueError(f"Year out of range: {year}")
+        return year
+
+    def validate_month(self, month_str):
+        """Validate the month input."""
+        if not month_str.isdigit():
+            raise ValueError(f"Invalid month: {month_str}")
+        month = int(month_str)
+        if month < 1 or month > 12:
+            raise ValueError(f"Month out of range: {month}")
+        return month
 
 if __name__ == "__main__":
     processor = WeatherProcessor()
