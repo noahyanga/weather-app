@@ -126,7 +126,7 @@ class WeatherScraper(HTMLParser):
         with ThreadPoolExecutor(max_workers=1) as executor:
             while True:
                 # Check if the date is earlier than the earliest available data
-                if current_year < 2020 or (current_year == 2020 and current_month < 12):
+                if current_year < 2020 or (current_year == 2020 and current_month < 1):
                     print("No more data available. Earliest date reached.")
                     break
 
