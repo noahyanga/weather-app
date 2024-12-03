@@ -3,8 +3,6 @@ Module to plot weather data.
 """
 
 import matplotlib.pyplot as plt
-from db_operations import DBOperations
-
 class PlotOperations:
     """
     Class to plot weather data.

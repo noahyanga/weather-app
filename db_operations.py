@@ -74,7 +74,6 @@ class DBOperations:
                 else:
                     cursor.execute("""SELECT date, location, min_temp, max_temp, avg_temp
                                       FROM samples""")
-                
                 rows = cursor.fetchall()
                 return [
                     {"date": row[0], "location": row[1], "min_temp": row[2], "max_temp": row[3], "avg_temp": row[4]}

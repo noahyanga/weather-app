@@ -23,6 +23,9 @@ class WeatherProcessor:
         self.scraper = WeatherScraper()
 
     def initialize_db(self):
+        """
+        Initialize the database.
+        """
         self.db = DBOperations()
         self.db.initialize_db()
 
@@ -111,7 +114,7 @@ class WeatherProcessor:
             date = entry['date']
             if date:
                 try:
-                    year, month, day = map(int, date.split('-'))
+                    year, month = map(int, date.split('-'))
                     if year not in organized_data:
                         organized_data[year] = {}
                     if month not in organized_data[year]:

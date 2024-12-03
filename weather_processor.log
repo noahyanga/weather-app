@@ -24,3 +24,4 @@
 2024-12-03 09:57:10,443:ERROR:Skipping invalid date entry: 2015-07- - Error: invalid literal for int() with base 10: ''
 2024-12-03 12:09:56,875:ERROR:Attempted to update data without downloading full data first.
 2024-12-03 12:12:39,720:ERROR:Error parsing years for box plot: Year out of range: 1
+2024-12-03 12:15:14,186:ERROR:Attempted to update data without downloading full data first.

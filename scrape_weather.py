@@ -5,8 +5,8 @@ Module to scrape weather data from the Government of Canada's website.
 from html.parser import HTMLParser
 import urllib.request
 from datetime import datetime
-from db_operations import DBOperations
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from db_operations import DBOperations
 
 class WeatherScraper(HTMLParser):
     """
@@ -35,7 +35,7 @@ class WeatherScraper(HTMLParser):
             self.current_temp = []
             self.col_index = 0
             self.tr_found = True  # Found a <tr> tag, set the flag to True
-        elif tag == 'td' and self.recording_row: 
+        elif tag == 'td' and self.recording_row:
             self.recording_cell = True
             self.col_index += 1
         elif tag == 'th' and self.recording_row and self.col_index == 0:  # Date column
@@ -72,7 +72,7 @@ class WeatherScraper(HTMLParser):
         """
         Handle the end tag of an HTML element.
         """
-        if tag == 'td' or tag == 'th':
+        if tag in ('td', 'th'):  # End of cell
             self.recording_cell = False
         elif tag == 'tr':  # End of row
             if self.current_date and len(self.current_temp) == 3:
@@ -97,7 +97,7 @@ class WeatherScraper(HTMLParser):
             # Check if there is a link to the "Previous Month" page
             if 'Previous Month' not in html:
                 self.has_previous_month = False
-                print(f"No 'Previous Month' link found for {year}-{month:02}. No more data to scrape.")
+                print(f"No 'Previous Month' link for {year}-{month:02}. No more data to scrape.")
             else:
                 self.has_previous_month = True
 
@@ -166,4 +166,4 @@ if __name__ == "__main__":
 
     # Testing to see auto stopping of no more data (not working yet)
     scraper = WeatherScraper()
-    scraper.scrape_backwards(2024, 12)
+    scraper.scrape_backwards(current_year, current_month)
