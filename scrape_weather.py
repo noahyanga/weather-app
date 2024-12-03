@@ -123,10 +123,10 @@ class WeatherScraper(HTMLParser):
         db = DBOperations()
         tasks = []
 
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:
             while True:
                 # Check if the date is earlier than the earliest available data
-                if current_year < 1996 or (current_year == 1996 and current_month < 9):
+                if current_year < 2020 or (current_year == 2020 and current_month < 12):
                     print("No more data available. Earliest date reached.")
                     break
 
@@ -166,4 +166,4 @@ if __name__ == "__main__":
 
     # Testing to see auto stopping of no more data (not working yet)
     scraper = WeatherScraper()
-    scraper.scrape_backwards(current_year, current_month)
+    scraper.scrape_backwards(2024, 12)
