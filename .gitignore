@@ -1,1 +1,7 @@
 __pycache__/
+ 
+# Ignore virtual environment directory
+venv/
+dist/
+build/
+ 
