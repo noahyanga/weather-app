@@ -114,7 +114,7 @@ class WeatherProcessor:
             date = entry['date']
             if date:
                 try:
-                    year, month = map(int, date.split('-'))
+                    year, month, day= map(int, date.split('-'))
                     if year not in organized_data:
                         organized_data[year] = {}
                     if month not in organized_data[year]:
